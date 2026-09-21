@@ -572,7 +572,7 @@ partial class Program
         break;
 
       sb.Append(_body.AsSpan(startIdx, uriIdx - startIdx));
-      sb.Append($"\"file://{char.ToLower(windowsDrive)}:/");
+      sb.Append($"\"file:///{char.ToLower(windowsDrive)}:/");
 
       startIdx = uriIdx + URI_HEADER.Length;
     }
