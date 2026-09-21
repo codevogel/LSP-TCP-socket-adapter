@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace LSAdapter;
 
@@ -582,7 +583,14 @@ partial class Program
     string PATH_HEADER = $"\"{mountPath}/";
     sb.Replace(PATH_HEADER, $"\"{char.ToUpper(windowsDrive)}:/");
 
-    return $"Content-Length: {sb.Length}\r\n\r\n" + sb.ToString();
+    // WSL2's PID is meaningless to Roslyn LS running natively on Windows - it calls
+    // Process.GetProcessById() on this value to watch the client process, which throws
+    // (unobserved on a ThreadPool thread, which crashes the whole process) when the PID
+    // doesn't exist on Windows. Neutralize it - null is valid per the LSP spec and just
+    // means "don't monitor a client process".
+    string body = Regex.Replace(sb.ToString(), "\"processId\":\\d+", "\"processId\":null");
+
+    return $"Content-Length: {body.Length}\r\n\r\n" + body;
   }
 
   /// <summary>
