@@ -169,6 +169,7 @@ partial class Program
     p.StartInfo.UseShellExecute = false;
     p.StartInfo.RedirectStandardInput = true;
     p.StartInfo.RedirectStandardOutput = true;
+    p.StartInfo.RedirectStandardError = true;
 
     p.Start();
 
@@ -300,7 +301,22 @@ partial class Program
     }
     finally
     {
-      // LS process cleanup
+      // LS process cleanup - drain stderr synchronously before killing/disposing
+      // so any crash text buffered by the child isn't lost to teardown races
+      try
+      {
+        string errOutput = p.StandardError.ReadToEnd();
+        if (!string.IsNullOrEmpty(errOutput))
+          Logger.LogError("[LS stderr]: {0}", errOutput);
+      }
+      catch (Exception e)
+      {
+        Logger.LogError("failed to drain LS stderr: {0}", e.Message);
+      }
+
+      if (p.HasExited)
+        Logger.LogError("LS process exited with code: {0}", p.ExitCode);
+
       p.Kill();
       p.Dispose();
 
